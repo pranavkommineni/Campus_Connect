@@ -1,0 +1,58 @@
+# CloudFormation for the storage/queue/IAM pieces. NOT deployed or validated against a live account in this repo.
+# Network (VPC), EC2, RDS, CloudFront, DMS and Budgets are documented as CLI steps in docs/AWS.md.
+AWSTemplateFormatVersion: "2010-09-09"
+Description: CampusConnect - KMS, S3 posters bucket, SQS queue with DLQ, EC2 instance role
+Resources:
+  AppKey:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: CampusConnect data key
+      EnableKeyRotation: true
+      KeyPolicy:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: AccountAdmin
+            Effect: Allow
+            Principal: { AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root" }
+            Action: "kms:*"
+            Resource: "*"
+  PostersBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "campusconnect-posters-${AWS::AccountId}"
+      PublicAccessBlockConfiguration: { BlockPublicAcls: true, BlockPublicPolicy: true, IgnorePublicAcls: true, RestrictPublicBuckets: true }
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault: { SSEAlgorithm: "aws:kms", KMSMasterKeyID: !GetAtt AppKey.Arn }
+  DeadLetterQueue:
+    Type: AWS::SQS::Queue
+    Properties: { QueueName: campusconnect-jobs-dlq, KmsMasterKeyId: !Ref AppKey, MessageRetentionPeriod: 1209600 }
+  JobsQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: campusconnect-jobs
+      KmsMasterKeyId: !Ref AppKey
+      VisibilityTimeout: 60
+      RedrivePolicy: { deadLetterTargetArn: !GetAtt DeadLetterQueue.Arn, maxReceiveCount: 5 }
+  AppRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement: [{ Effect: Allow, Principal: { Service: ec2.amazonaws.com }, Action: "sts:AssumeRole" }]
+      Policies:
+        - PolicyName: campusconnect-app
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - { Effect: Allow, Action: ["s3:PutObject", "s3:GetObject"], Resource: !Sub "${PostersBucket.Arn}/posters/*" }
+              - { Effect: Allow, Action: ["sqs:SendMessage", "sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"], Resource: !GetAtt JobsQueue.Arn }
+              - { Effect: Allow, Action: ["kms:GenerateDataKey", "kms:Decrypt"], Resource: !GetAtt AppKey.Arn }
+              - { Effect: Allow, Action: ["logs:CreateLogStream", "logs:PutLogEvents"], Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/campusconnect/*:*" }
+  AppInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties: { Roles: [!Ref AppRole] }
+Outputs:
+  QueueUrl: { Value: !Ref JobsQueue }
+  BucketName: { Value: !Ref PostersBucket }
+  InstanceProfile: { Value: !Ref AppInstanceProfile }

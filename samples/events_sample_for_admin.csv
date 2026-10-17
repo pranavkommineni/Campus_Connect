@@ -1,0 +1,4 @@
+title,description,category,venue,start_at,end_at,capacity,registration_deadline,eligibility,department,academic_year,contact_info,club,submit
+Intro to Docker,Containers for beginners,Workshop,Innovation Lab,2030-03-10 10:00,2030-03-10 13:00,30,2030-03-09 18:00,Open to all students,CSE,2,codeclub@campusconnect.dev,Code Club,yes
+Open Mic Night,Music and poetry,Cultural,Main Auditorium,2030-03-12 17:00,2030-03-12 20:00,300,2030-03-12 12:00,Open to all students,,,artsclub@campusconnect.dev,Arts & Culture Society,no
+Broken Row,Bad date on purpose,Technical,Seminar Hall A,31/02/2030,2030-03-15 12:00,50,2030-03-14 12:00,,,,,Code Club,yes

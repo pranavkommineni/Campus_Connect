@@ -1,0 +1,14 @@
+{
+  "_comment": "Least-privilege examples. Replace ACCOUNT_ID, REGION, bucket/queue/key names. Untested against a live account.",
+  "ec2_app_role_policy": {
+    "Version": "2012-10-17",
+    "Statement": [
+      {"Sid": "PosterBucketReadWrite", "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject"], "Resource": "arn:aws:s3:::campusconnect-posters-ACCOUNT_ID/posters/*"},
+      {"Sid": "SendNotificationJobs", "Effect": "Allow", "Action": ["sqs:SendMessage"], "Resource": "arn:aws:sqs:REGION:ACCOUNT_ID:campusconnect-jobs"},
+      {"Sid": "WorkerConsume", "Effect": "Allow", "Action": ["sqs:ReceiveMessage", "sqs:DeleteMessage", "sqs:GetQueueAttributes"], "Resource": "arn:aws:sqs:REGION:ACCOUNT_ID:campusconnect-jobs"},
+      {"Sid": "ReadAppSecrets", "Effect": "Allow", "Action": ["secretsmanager:GetSecretValue"], "Resource": "arn:aws:secretsmanager:REGION:ACCOUNT_ID:secret:campusconnect/*"},
+      {"Sid": "UseKmsKey", "Effect": "Allow", "Action": ["kms:GenerateDataKey", "kms:Decrypt"], "Resource": "arn:aws:kms:REGION:ACCOUNT_ID:key/KEY_ID"},
+      {"Sid": "CloudWatchLogs", "Effect": "Allow", "Action": ["logs:CreateLogStream", "logs:PutLogEvents"], "Resource": "arn:aws:logs:REGION:ACCOUNT_ID:log-group:/campusconnect/*:*"}
+    ]
+  }
+}
